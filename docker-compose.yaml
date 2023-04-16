@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: redis
+
+  # postgres container
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    container_name: postgres_db
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+   
+  # django application container
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/code
+    container_name: django_web_app
+    image: django:app
+    environment:
+      DB_HOST: db
+      MYSQL_DATABASE: sample_db
+      MYSQL_USER: sample_user
+      MYSQL_PASSWORD: sample_password
+      MYSQL_ROOT_PASSWORD: sample123
+    ports:
+      - 8005:8000
+    depends_on:
+      - db
+    links:
+      - db
+
+  # celery
+  celery:
+    restart: always
+    build: 
+      context: .
+    command: celery -A core worker -l INFO
+    volumes:
+      - .:/code
+    container_name: celery
+    depends_on:
+      - db
+      - redis
+      - app
+
+      
